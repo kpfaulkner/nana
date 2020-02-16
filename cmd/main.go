@@ -7,12 +7,119 @@ import (
 	"github.com/reiver/go-telnet"
 	"io"
 	"net"
+	"strings"
 	"time"
 )
 
-// change
-
 type NanaCaller struct{}
+
+func NewNanaCaller() NanaCaller {
+	n := NanaCaller{}
+
+	return n
+}
+
+func (c NanaCaller) CallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
+
+	login(w)
+
+	//channelFull(w, 6)
+
+	faderBrightness(w,2,100)
+
+	for i:=0; i< 100; i++ {
+		faderBrightness(w,3,i)
+		faderBrightness(w,4,i)
+		time.Sleep(time.Duration(100) * time.Millisecond)
+	}
+
+	for {
+		time.Sleep(time.Duration(1) * time.Second)
+	}
+}
+
+func executeCommand(writer telnet.Writer, command string) error {
+	_, err := writer.Write([]byte(command))
+	if err != nil {
+		fmt.Printf("executeCommand error %s\n", err.Error())
+		return err
+	}
+	return nil
+}
+
+func channelFull(writer telnet.Writer, channelNo int) error {
+	template := "channel %d full\r\n"
+	cmd := fmt.Sprintf(template, channelNo)
+  return executeCommand(writer, cmd)
+}
+
+func faderBrightness(writer telnet.Writer, faderNo int, brightnessPercentage int) error {
+	template := "fader %d At %d\r\n"
+	cmd := fmt.Sprintf(template, faderNo, brightnessPercentage)
+	return executeCommand(writer, cmd)
+}
+
+func login(writer telnet.Writer) error {
+
+	l := "Login \"telnet\" \"0872\"\r\n"
+
+	length, err := writer.Write([]byte(l))
+	if err != nil {
+		fmt.Printf("login error %s\n", err.Error())
+	}
+
+	fmt.Printf("write %d chars\n", length)
+
+	return nil
+}
+
+// readBanner reads until it hits a ! char
+func readBanner(reader telnet.Reader) error {
+	data := make([]byte,1,1)
+
+	for {
+		length, err := reader.Read(data)
+		if err != nil {
+			fmt.Printf("ERROR while reading banner %s\n", err.Error())
+			return err
+		}
+
+		fmt.Printf("read %d bytes from banner\n", length)
+
+		s := string(data)
+		fmt.Printf("data is %s\n", s)
+
+		if strings.Contains(s, "!") {
+			break
+		}
+	}
+
+  fmt.Printf("broken out of loop\n")
+
+	return nil
+}
+
+func readBannerOLD() error {
+	conn, _ := telnet.DialTo("rainmaker.wunderground.com:23")
+
+	data := make([]byte,1,1)
+
+	totalCount := 0
+	for {
+		n, err := conn.Read(data)
+		if err != nil {
+			fmt.Printf("error on read %s\n", err.Error())
+			return err
+		}
+
+		fmt.Printf("read %d bytes\n", n)
+		totalCount += n
+		fmt.Printf("read total %d bytes\n", totalCount)
+		fmt.Printf("raw char is %v\n", data)
+		fmt.Printf("char is %s\n", string(data))
+
+	}
+}
 
 func readLoop( r telnet.Reader) error {
 	bytes := make([]byte,1,1)
@@ -38,16 +145,6 @@ func readLoop( r telnet.Reader) error {
 			fmt.Printf(string(bytes[:len(bytes)]))
 		}
 	}
-}
-
-func (c NanaCaller) CallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
-
-	go readLoop(r)
-
-	for {
-		time.Sleep(time.Duration(1) * time.Second)
-	}
-
 }
 
 func readData(conn net.Conn) (string, error) {
@@ -156,7 +253,7 @@ func testidea() error {
 
 func main() {
 
-	grandmaAddr := flag.String("server", "rainmaker.wunderground.com", "IP/Host of Grand-MA server")
+	grandmaAddr := flag.String("server", "10.0.0.91", "IP/Host of Grand-MA server")
 	//username := flag.String("username", "", "Grand-MA username")
 	//password := flag.String("password", "", "Grand-MA password")
 	//verbose := flag.Bool("verbose", false, "spamageddon")
@@ -170,7 +267,7 @@ func main() {
 	var caller telnet.Caller = NanaCaller{}
 
 	//@TOOD: replace "example.net:5555" with address you want to connect to.
-	telnet.DialToAndCall((*grandmaAddr)+":23", caller)
+	telnet.DialToAndCall((*grandmaAddr)+":30000", caller)
 
 
   //readSplashScreen(conn)
