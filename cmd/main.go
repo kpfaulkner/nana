@@ -16,15 +16,32 @@ type NanaCaller struct{}
 // If the login fails, the program will die completely.
 func (c NanaCaller) CallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
 	login(w)
+	time.Sleep(time.Duration(500) * time.Millisecond)
 
-	groupFull(w, 38)
+	fixtureFull(w, 1002, 1003)
+
+	fixtureFull(w, 1002, 1003)
+	fixtureFull(w, 1002, 1003)
+	fixtureFull(w, 1002, 1003)
+	fixtureFull(w, 1002, 1003)
+	fixtureFull(w, 1002, 1003)
+	fixtureFull(w, 1002, 1003)
+
+	faderBrightness(w, 2, 0)
+	time.Sleep(time.Duration(1000) * time.Millisecond)
+	faderBrightness(w, 2, 100)
+
 	/*
+		fixtureFull(w, 1002, 1003)
+		fixtureFull(w, 1002, 1003)
+		groupFull(w, 38)
+
 		// set channel 6 to full.
 		channelFull(w, 6)
 
 		faderBrightness(w, 2, 100)
 
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 10; i++ {
 			faderBrightness(w, 3, i)
 			faderBrightness(w, 4, i)
 			time.Sleep(time.Duration(100) * time.Millisecond)
@@ -32,11 +49,21 @@ func (c NanaCaller) CallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Rea
 	*/
 }
 
-// channelFull turns a channel to full. No idea what that means, ask Will :)
+// channelFull turns a group of channels to full brightness. No idea what that means, ask Will :)
 func channelFull(writer telnet.Writer, channelNo int) error {
 	template := "channel %d full\r\n"
 	cmd := fmt.Sprintf(template, channelNo)
 
+	// cmd should be "channel 6 full\r\n"
+	return executeCommand(writer, cmd)
+}
+
+// fixtureFull turns a group of fixtures to full. No idea what that means, ask Will :)               fixture 1002 thru 1003 full
+func fixtureFull(writer telnet.Writer, firstfixture int, secondfixture int) error {
+	template := "fixture %d thru %d full\r\n"
+	cmd := fmt.Sprintf(template, firstfixture, secondfixture)
+
+	fmt.Printf("fixture command is %s\n", cmd)
 	// cmd should be "channel 6 full\r\n"
 	return executeCommand(writer, cmd)
 }
@@ -55,6 +82,7 @@ func groupFull(writer telnet.Writer, group int) error {
 	template := "group %d full\r\n"
 	cmd := fmt.Sprintf(template, group)
 
+	fmt.Printf("groupfull command in %s\n", cmd)
 	// cmd should be "group 38 full\r\n"
 	return executeCommand(writer, cmd)
 }
@@ -63,7 +91,7 @@ func groupFull(writer telnet.Writer, group int) error {
 // if it fails, it will give some error messages and STOP the program completely
 // (this is what log.Fatal below does)
 func login(writer telnet.Writer) error {
-	l := "Login \"telnet\" \"0872\"\r\n"
+	l := "Login \"telnet\" \"0872\"\r\n\r\n\r\n"
 	length, err := writer.Write([]byte(l))
 	if err != nil {
 		fmt.Printf("login error %s\n", err.Error())
@@ -82,6 +110,8 @@ func executeCommand(writer telnet.Writer, command string) error {
 		fmt.Printf("executeCommand error %s\n", err.Error())
 		return err
 	}
+
+	time.Sleep(200 * time.Millisecond)
 	return nil
 }
 
